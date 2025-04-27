@@ -1,0 +1,503 @@
+import { useState, useEffect } from 'react'
+import styled from 'styled-components'
+import { motion, AnimatePresence } from 'framer-motion'
+import './App.css'
+import ironPickaxe from './assets/iron.png';
+import goldPickaxe from './assets/gold.png';
+import diamondPickaxe from './assets/diamond.png';
+import startfarmer from './assets/start-kisan.png';
+import endfarmer from './assets/end-kisan.png';
+import ScanGunImg from './assets/ScanGunImg.png';
+
+
+const MatrixBackground = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  overflow: hidden;
+  z-index: 0;
+
+  &:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+      circle at center,
+      transparent 0%,
+      rgba(0, 0, 0, 0.8) 100%
+    );
+    z-index: 1;
+  }
+`
+
+const Scene = styled.div`
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: ${props => props.$isLit ? 'rgba(0, 255, 0, 0.2)' : 'transparent'};
+  transition: background 2s ease;
+  z-index: 2;
+`
+
+const ARScanner = styled.div`
+  width: 300px;
+  height: 300px;
+  position: relative;
+  margin-bottom: 20px;
+
+  &:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid #00ff00;
+    animation: scan 2s linear infinite;
+  }
+
+  @keyframes scan {
+    0% {
+      clip-path: polygon(0 0, 100% 0, 100% 2px, 0 2px);
+    }
+    100% {
+      clip-path: polygon(0 100%, 100% 100%, 100% calc(100% - 2px), 0 calc(100% - 2px));
+    }
+  }
+`
+
+const ScannerOverlay = styled.div`
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  border: 2px solid #00ff00;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+
+  &:before, &:after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #00ff00;
+  }
+
+  &:before {
+    top: -2px;
+    left: -2px;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  &:after {
+    bottom: -2px;
+    right: -2px;
+    border-left: none;
+    border-top: none;
+  }
+`
+
+const PickaxeContainer = styled.div`
+  display: flex;
+  gap: 40px;
+  position: relative;
+  margin-bottom: 300px;
+`
+const Farmer = styled(motion.div)`
+  width: 200px;
+  height: 300px;
+  position: absolute;
+  bottom: 20%;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(0, 255, 0, 0.5));
+  }
+`;
+
+const Pickaxe = styled(motion.div)`
+  width: 150px;
+  height: 150px;
+  cursor: pointer;
+  position: relative;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(0, 255, 0, 0.5));
+  }
+
+  &:hover {
+    filter: brightness(1.2);
+  }
+`
+const ScanGunWrapper = styled(motion.div)`
+  width: 150px;
+  height: 200px;
+  position: absolute;
+  left: 5%;
+  top: 40%;
+  transform: rotate(-20deg);
+  z-index: 3;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.7));
+  }
+`;
+const LaserBeam = styled(motion.div)`
+  width: 5px;
+  height: 300px;
+  background: linear-gradient(to bottom, red, rgba(255, 0, 0, 0.2));
+  position: absolute;
+  left: 20%;
+  top: 45%;
+  transform-origin: top;
+  opacity: 0;
+  z-index: 2;
+`;
+
+const Portal = styled(motion.div)`
+  width: 300px;
+  height: 300px;
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, #00ff00 0%, transparent 70%);
+  opacity: 0;
+  transform-origin: center;
+`
+const ScanBox = styled(motion.div)`
+  width: 200px;
+  height: 200px;
+  position: absolute;
+  top: 50%;
+  left: 30%;
+  transform: translate(-50%, -50%);
+  border: 3px solid #00ff00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 255, 0, 0.1);
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+  z-index: 3;
+
+  img {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(0, 255, 0, 0.7));
+  }
+`;
+
+
+const Graffiti = styled(motion.div)`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00ff00;
+  font-size: 48px;
+  text-shadow: 0 0 10px #00ff00;
+  z-index: 10;
+  font-family: 'Courier New', monospace;
+`
+
+const Hologram = styled(motion.div)`
+  width: 300px;
+  height: 400px;
+  background: rgba(0, 255, 0, 0.1);
+  border: 2px solid #00ff00;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  margin-top: 20px;
+  color: #00ff00;
+  text-shadow: 0 0 5px #00ff00;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+  backdrop-filter: blur(5px);
+  position: relative;
+  overflow: hidden;
+
+  &:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 0, 0.1) 2px,
+      rgba(0, 255, 0, 0.1) 4px
+    );
+    animation: hologramScan 10s linear infinite;
+  }
+
+  @keyframes hologramScan {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(100%);
+    }
+  }
+`
+
+const MatrixRain = () => {
+  useEffect(() => {
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*";
+    const fontSize = 14;
+    const columns = canvas.width / fontSize;
+    const drops = Array(Math.floor(columns)).fill(1);
+
+    function draw() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#0F0';
+      ctx.font = `${fontSize}px monospace`;
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+    }
+
+    const interval = setInterval(draw, 33);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <canvas
+      id="matrixCanvas"
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        zIndex: 0,
+      }}
+    />
+  );
+};
+
+function App() {
+  const [selectedPickaxe, setSelectedPickaxe] = useState(null)
+  const [showGraffiti, setShowGraffiti] = useState(false)
+  const [isLit, setIsLit] = useState(false)
+  const [showHologram, setShowHologram] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [showPortal, setShowPortal] = useState(false)
+  const [showFarmer, setShowFarmer] = useState(true)
+  const [showScanGun, setShowScanGun] = useState(false);
+  const [showLaser, setShowLaser] = useState(false);
+  const [scanningPickaxe, setScanningPickaxe] = useState(null);
+
+  const pickaxes = {
+    iron: ironPickaxe,
+    gold: goldPickaxe , 
+    diamond: diamondPickaxe
+  }
+
+  const handlePickaxeSelect = (pickaxe) => {
+    setSelectedPickaxe(pickaxe);
+    setScanningPickaxe(pickaxe);
+    setShowFarmer(false);
+    setScanning(true);
+  
+    setTimeout(() => {
+      setShowScanGun(true); // Show scan gun
+      setTimeout(() => {
+        setShowLaser(true); // Start laser scan
+  
+        setTimeout(() => {
+          setShowLaser(false); // Hide laser after scan completes
+          setShowGraffiti(true);
+          setScanning(false);
+  
+          setTimeout(() => {
+            setShowGraffiti(false);
+            setIsLit(true);
+  
+            setTimeout(() => {
+              setShowHologram(true);
+            }, 2000);
+          }, 2000);
+        }, 2000);
+      }, 1000);
+    }, 2000);
+  };
+  
+  
+  
+  
+
+  return (
+    <>
+      <MatrixBackground>
+        <MatrixRain />
+      </MatrixBackground>
+      <Scene $isLit={isLit}>
+        <AnimatePresence>
+          {showGraffiti && (
+            <Graffiti
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              *DIGITAL ASSIMILATION COMPLETE*
+            </Graffiti>
+          )}
+        </AnimatePresence>
+
+        <div style={{ position: 'relative' }}>
+          {scanning && (
+            <ARScanner>
+              <ScannerOverlay />
+            </ARScanner>
+          )}
+          
+          <AnimatePresence>
+            {showPortal && (
+              <Portal
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1.5 }}
+                exit={{ opacity: 0, scale: 0 }}
+                transition={{ duration: 2 }}
+              />
+            )}
+          </AnimatePresence>
+        </div>
+
+        <AnimatePresence>
+          {showFarmer && (
+            <Farmer
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1 }}
+          >
+            <img src={startfarmer} alt="Farmer" />
+          </Farmer>)}
+        </AnimatePresence>
+          
+        <AnimatePresence>
+  {selectedPickaxe && showScanGun && (
+    <ScanBox
+      initial={{ opacity: 0, scale: 0 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0 }}
+      transition={{ duration: 1 }}
+    >
+      <img src={pickaxes[selectedPickaxe]} alt={`${selectedPickaxe} pickaxe`} />
+    </ScanBox>
+  )}
+</AnimatePresence>
+
+
+        <AnimatePresence>
+  {showScanGun && (
+    <ScanGunWrapper
+      initial={{ opacity: 0, x: -50 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -50 }}
+      transition={{ duration: 1 }}
+    >
+      <img src={ScanGunImg} alt="ScanGun" />
+    </ScanGunWrapper>
+  )}
+</AnimatePresence>
+
+<AnimatePresence>
+  {showLaser && (
+    <LaserBeam
+      initial={{ opacity: 0, scaleY: 0 }}
+      animate={{ opacity: 1, scaleY: 1 }}
+      exit={{ opacity: 0, scaleY: 0 }}
+      transition={{ duration: 1 }}
+    />
+  )}
+</AnimatePresence>
+
+
+        {!selectedPickaxe && (
+          <PickaxeContainer>
+          {Object.entries(pickaxes).map(([type, src]) => (
+            <Pickaxe
+              key={type}
+              onClick={() => handlePickaxeSelect(type)}
+              initial={{ opacity: 1, scale: 1 }}
+              whileHover={{ scale: 1.1 }}
+              animate={selectedPickaxe === type ? {
+                opacity: 0, // Hide original pickaxe (since it's in the ScanBox now)
+                transition: { duration: 0.5 }
+              } : {
+                opacity: 1,
+                scale: 1,
+              }}
+            >
+              <img src={src} alt={`${type} pickaxe`} />
+            </Pickaxe>
+          ))}
+        </PickaxeContainer>
+        
+        
+        
+        )}
+
+<AnimatePresence>
+  {showHologram && (
+    <Hologram
+      initial={{ y: 100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 1 }}
+    >
+      <p>Scanning Complete: {scanningPickaxe.toUpperCase()} Pickaxe</p>
+      {scanningPickaxe === "iron" && <p>Durability: ★★★☆☆ | Efficiency: ★★☆☆☆</p>}
+      {scanningPickaxe === "gold" && <p>Durability: ★☆☆☆☆ | Efficiency: ★★★★☆</p>}
+      {scanningPickaxe === "diamond" && <p>Durability: ★★★★★ | Efficiency: ★★★★★</p>}
+    </Hologram>
+  )}
+</AnimatePresence>
+
+      </Scene>
+    </>
+  )
+}
+
+export default App
